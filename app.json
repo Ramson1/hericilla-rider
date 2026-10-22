@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Hericilla Drivers",
+    "slug": "hericilla-driver-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "hericilla-drivers",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f3343"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ng.hericilla.drivers"
+    },
+    "android": {
+      "package": "ng.hericilla.drivers",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0f3343"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Hericilla Drivers uses photos to capture proof of delivery and receipts.",
+          "cameraPermission": "Hericilla Drivers uses the camera to photograph deliveries."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Hericilla Drivers records your location when you clock in and update job status, to verify you are on site."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1d7791"
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+
+# expo & builds
+.expo/
+dist/
+dist-verify/
+build/
+web-build/
+*.hbc
+
+# native (not used — CNG managed, kept safe)
+ios/
+android/
+
+# turbo cache
+.turbo/
+
+# env — never commit real keys
+.env
+.env.local
+.env*.local
+
+# logs & editor
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# misc
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
