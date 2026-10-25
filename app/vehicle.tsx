@@ -34,14 +34,14 @@ export default function VehicleScreen() {
     const sb = getSupabase();
     const [{ data: alloc }, { data: lists }] = await Promise.all([
       sb
-        .from("vehicle_allocations")
-        .select("id, vehicles(id, reg_no, odometer_km)")
+        .from("hericilla_vehicle_allocations")
+        .select("id, vehicles:hericilla_vehicles(id, reg_no, odometer_km)")
         .eq("driver_id", uid)
         .is("released_at", null)
         .order("valid_from", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      sb.from("inspection_checklists").select("id, name, trip_phase, items").eq("is_active", true).order("name"),
+      sb.from("hericilla_inspection_checklists").select("id, name, trip_phase, items").eq("is_active", true).order("name"),
     ]);
     setAllocation((alloc as unknown as Allocation) ?? null);
     setChecklists((lists as unknown as Checklist[]) ?? []);

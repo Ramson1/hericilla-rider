@@ -49,7 +49,7 @@ export async function registerForPush(): Promise<void> {
   const token = tokenRes.data;
   if (token === lastRegistered) return;
 
-  const { error } = await sb.from("expo_push_tokens").upsert(
+  const { error } = await sb.from("hericilla_expo_push_tokens").upsert(
     { token, user_id: user.id, os: Platform.OS, enabled: true, updated_at: new Date().toISOString() },
     { onConflict: "token" },
   );

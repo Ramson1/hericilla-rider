@@ -28,7 +28,7 @@ export default function MoreScreen() {
   const load = useCallback(async () => {
     if (!uid) return;
     const { data } = await getSupabase()
-      .from("trip_expenses")
+      .from("hericilla_trip_expenses")
       .select("id, expense_type, amount, occurred_at, status")
       .eq("submitted_by", uid)
       .order("created_at", { ascending: false })

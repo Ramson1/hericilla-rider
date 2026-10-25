@@ -44,7 +44,7 @@ export default function PodScreen() {
   const load = useCallback(async () => {
     if (!uid) return;
     const { data } = await getSupabase()
-      .from("transport_jobs")
+      .from("hericilla_transport_jobs")
       .select("id, ref_no, destination, status")
       .eq("driver_id", uid)
       .in("status", ["arrived", "loaded", "in_transit"])

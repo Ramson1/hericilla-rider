@@ -60,14 +60,14 @@ export default function ClockScreen() {
     const dayStart = new Date(`${todayStr()}T00:00:00`).toISOString();
     const [{ data: ev }, { data: jobs }] = await Promise.all([
       sb
-        .from("attendance_events")
+        .from("hericilla_attendance_events")
         .select("id, event_type, event_time, work_order_id")
         .eq("employee_id", uid)
         .gte("event_time", dayStart)
         .order("event_time", { ascending: false })
         .limit(20),
       sb
-        .from("transport_jobs")
+        .from("hericilla_transport_jobs")
         .select("id, ref_no, work_order_id, status")
         .eq("driver_id", uid)
         .in("status", ["assigned", "accepted", "arrived", "loaded", "in_transit"])

@@ -50,8 +50,8 @@ export default function JobDetailScreen() {
   const load = useCallback(async () => {
     if (!id) return;
     const { data } = await getSupabase()
-      .from("transport_jobs")
-      .select("*, work_orders(id, wo_number, service_request_id), vehicles(id, reg_no, vehicle_type)")
+      .from("hericilla_transport_jobs")
+      .select("*, work_orders:hericilla_work_orders(id, wo_number, service_request_id), vehicles:hericilla_vehicles(id, reg_no, vehicle_type)")
       .eq("id", id)
       .maybeSingle();
     setJob((data as unknown as JobDetail) ?? null);

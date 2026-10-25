@@ -27,7 +27,7 @@ export default function JobsScreen() {
   const load = useCallback(async () => {
     if (!uid) return;
     const { data } = await getSupabase()
-      .from("transport_jobs")
+      .from("hericilla_transport_jobs")
       .select("id, ref_no, pickup_location, destination, scheduled_at, status")
       .eq("driver_id", uid)
       .order("created_at", { ascending: false })

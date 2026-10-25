@@ -45,21 +45,21 @@ export default function HomeScreen() {
     const sb = getSupabase();
     const [{ data: jobData }, { data: allocData }, { data: newsData }] = await Promise.all([
       sb
-        .from("transport_jobs")
+        .from("hericilla_transport_jobs")
         .select("id, ref_no, pickup_location, destination, scheduled_at, status")
         .eq("driver_id", uid)
         .in("status", OPEN_STATUSES)
         .order("scheduled_at", { ascending: true }),
       sb
-        .from("vehicle_allocations")
-        .select("id, valid_from, valid_to, vehicles(reg_no, vehicle_type)")
+        .from("hericilla_vehicle_allocations")
+        .select("id, valid_from, valid_to, vehicles:hericilla_vehicles(reg_no, vehicle_type)")
         .eq("driver_id", uid)
         .is("released_at", null)
         .order("valid_from", { ascending: false })
         .limit(1)
         .maybeSingle(),
       sb
-        .from("announcements")
+        .from("hericilla_announcements")
         .select("id, title, body, created_at")
         .order("created_at", { ascending: false })
         .limit(3),

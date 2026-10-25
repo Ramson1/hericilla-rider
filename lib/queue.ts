@@ -174,7 +174,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
   switch (row.entity) {
     case "attendance": {
       const a = p as unknown as QueuePayloads["attendance"];
-      const { error } = await sb.rpc("clock_event", {
+      const { error } = await sb.rpc("hericilla_clock_event", {
         p_type: a.type,
         p_work_order: a.work_order_id ?? null,
         p_site: a.site_id ?? null,
@@ -193,7 +193,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "correction": {
       const c = p as unknown as QueuePayloads["correction"];
-      const { error } = await sb.from("attendance_corrections").insert({
+      const { error } = await sb.from("hericilla_attendance_corrections").insert({
         employee_id: c.employee_id,
         requested_by: c.employee_id,
         work_date: c.work_date,
@@ -207,7 +207,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "job_status": {
       const j = p as unknown as QueuePayloads["job_status"];
-      const { error } = await sb.rpc("driver_update_job_status", {
+      const { error } = await sb.rpc("hericilla_driver_update_job_status", {
         p_job: j.job_id,
         p_to: j.to,
         p_gps_lat: j.gps_lat ?? null,
@@ -223,14 +223,14 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     case "pod": {
       const d = p as unknown as QueuePayloads["pod"];
       // Storage RLS: drivers may only write inside a folder starting with their user id.
-      const photos = await uploadAll("pod-evidence", `${uid}/pod/${d.job_id}/${row.event_id}`, d.photos);
+      const photos = await uploadAll("hericilla-pod-evidence", `${uid}/pod/${d.job_id}/${row.event_id}`, d.photos);
       let signatureUrl: string | null = null;
       if (d.signature_svg) {
         signatureUrl = `${uid}/pod/${d.job_id}/${row.event_id}-sig.svg`;
-        const { error } = await sb.storage.from("pod-evidence").upload(signatureUrl, d.signature_svg, { contentType: "image/svg+xml" });
+        const { error } = await sb.storage.from("hericilla-pod-evidence").upload(signatureUrl, d.signature_svg, { contentType: "image/svg+xml" });
         if (error && !error.message.toLowerCase().includes("already exists")) throw new Error(error.message);
       }
-      const { error } = await sb.from("proof_of_delivery").insert({
+      const { error } = await sb.from("hericilla_proof_of_delivery").insert({
         transport_job_id: d.job_id,
         photos,
         recipient_name: d.recipient_name,
@@ -245,8 +245,8 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "expense": {
       const e = p as unknown as QueuePayloads["expense"];
-      const receipts = await uploadAll("receipts", `${uid}/expense/${row.event_id}`, e.receipts);
-      const { error } = await sb.from("trip_expenses").insert({
+      const receipts = await uploadAll("hericilla-receipts", `${uid}/expense/${row.event_id}`, e.receipts);
+      const { error } = await sb.from("hericilla_trip_expenses").insert({
         transport_job_id: e.job_id ?? null,
         vehicle_id: e.vehicle_id ?? null,
         expense_type: e.expense_type,
@@ -260,7 +260,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "inspection": {
       const i = p as unknown as QueuePayloads["inspection"];
-      const { error } = await sb.from("inspection_results").insert({
+      const { error } = await sb.from("hericilla_inspection_results").insert({
         checklist_id: i.checklist_id ?? null,
         vehicle_id: i.vehicle_id,
         transport_job_id: i.transport_job_id ?? null,
@@ -276,8 +276,8 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     case "odometer": {
       const o = p as unknown as QueuePayloads["odometer"];
       let photoUrl: string | null = null;
-      if (o.photo) photoUrl = await uploadFile("pod-evidence", `${uid}/odometer/${row.event_id}.jpg`, o.photo);
-      const { error } = await sb.from("odometer_readings").insert({
+      if (o.photo) photoUrl = await uploadFile("hericilla-pod-evidence", `${uid}/odometer/${row.event_id}.jpg`, o.photo);
+      const { error } = await sb.from("hericilla_odometer_readings").insert({
         vehicle_id: o.vehicle_id,
         driver_id: o.driver_id,
         transport_job_id: o.transport_job_id ?? null,
@@ -289,7 +289,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "movement": {
       const m = p as unknown as QueuePayloads["movement"];
-      const { error } = await sb.from("vehicle_movements").insert({
+      const { error } = await sb.from("hericilla_vehicle_movements").insert({
         vehicle_id: m.vehicle_id,
         allocation_id: m.allocation_id ?? null,
         movement_type: m.movement_type,
@@ -303,8 +303,8 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "incident": {
       const c = p as unknown as QueuePayloads["incident"];
-      const photos = await uploadAll("pod-evidence", `${uid}/incident/${row.event_id}`, c.photos);
-      const { error } = await sb.from("incidents").insert({
+      const photos = await uploadAll("hericilla-pod-evidence", `${uid}/incident/${row.event_id}`, c.photos);
+      const { error } = await sb.from("hericilla_incidents").insert({
         vehicle_id: c.vehicle_id ?? null,
         transport_job_id: c.transport_job_id ?? null,
         incident_type: c.incident_type,
@@ -320,7 +320,7 @@ async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
     }
     case "issue": {
       const f = p as unknown as QueuePayloads["issue"];
-      const { error } = await sb.from("request_feedback").insert({
+      const { error } = await sb.from("hericilla_request_feedback").insert({
         service_request_id: f.service_request_id,
         kind: "issue",
         message: f.message,

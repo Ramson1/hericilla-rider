@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [lockedReason, setLockedReason] = useState<string | null>(null);
 
   const loadProfile = async (userId: string) => {
-    const { data, error } = await getSupabase().from("profiles").select("*").eq("id", userId).maybeSingle();
+    const { data, error } = await getSupabase().from("hericilla_profiles").select("*").eq("id", userId).maybeSingle();
     if (error || !data) {
       setProfile(null);
       setLockedReason("We could not find your account details. Please call the office.");
