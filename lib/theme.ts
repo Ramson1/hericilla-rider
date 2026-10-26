@@ -31,15 +31,15 @@ export const colors = {
   line: "#dbe4e8",
 };
 
-/** Elderly-first type scale: nothing below 16, body 18–20. */
+/** Standard type scale (normal sizes, matching the web portals — elderly-first scale retired). */
 export const text = {
-  xs: 16,
-  sm: 18,
-  body: 19,
-  lg: 22,
-  xl: 26,
-  xxl: 32,
-  giant: 40,
+  xs: 12,
+  sm: 14,
+  body: 16,
+  lg: 18,
+  xl: 22,
+  xxl: 28,
+  giant: 36,
 };
 
 export const radius = { card: 18, button: 16, pill: 999 };
