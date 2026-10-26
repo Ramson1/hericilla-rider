@@ -44,7 +44,18 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 18 }}>
           <View style={{ alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <Image source={require("../assets/logo.png")} style={{ width: 110, height: 110 }} resizeMode="contain" />
+            <View
+              style={{
+                width: 138,
+                height: 138,
+                borderRadius: 34,
+                backgroundColor: colors.white,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Image source={require("../assets/logo.png")} style={{ width: 110, height: 110 }} resizeMode="contain" />
+            </View>
             <Text style={{ color: colors.white, fontSize: text.xxl, fontWeight: "900" }}>Hericilla Drivers</Text>
             <Text style={{ color: colors.brand300, fontSize: text.sm, textAlign: "center" }}>
               Sign in with the email and password the office gave you.
