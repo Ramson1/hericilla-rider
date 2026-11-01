@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Image, Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { statusLabel } from "@hericilla/types";
 import { getSupabase } from "../../lib/supabase";
@@ -108,6 +108,21 @@ export default function MoreScreen() {
       <Text style={{ fontSize: text.xs, color: colors.gray500, textAlign: "center" }}>
         Signed in as {profile?.full_name ?? "…"} · Last sync check {fmtDateTimeLocal(new Date().toISOString())}
       </Text>
+
+      <Pressable
+        onPress={() => void Linking.openURL("https://blackboxtech.online")}
+        style={{ alignItems: "center", gap: 6, paddingTop: 8, paddingBottom: 16 }}
+      >
+        <Image
+          source={require("../../assets/blackboxtech.jpg")}
+          style={{ width: 32, height: 32, borderRadius: 16 }}
+          resizeMode="contain"
+          accessibilityLabel="Black-Box Tech logo"
+        />
+        <Text style={{ fontSize: text.xs, color: colors.gray700, textAlign: "center" }}>
+          Designed and Developed by <Text style={{ fontWeight: "800" }}>Black-Box Tech</Text>, and Ayo Ogundipe.
+        </Text>
+      </Pressable>
     </Screen>
   );
 }
