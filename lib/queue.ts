@@ -1,6 +1,14 @@
 import * as SQLite from "expo-sqlite";
 import NetInfo from "@react-native-community/netinfo";
+import { decodeJwtPayload, getAuthToken } from "@hericilla/supabase-clients";
 import { getSupabase } from "./supabase";
+
+/** Current signed-in profile id, read from the custom auth JWT. */
+function currentUserId(): string | null {
+  const token = getAuthToken();
+  const payload = token ? decodeJwtPayload(token) : null;
+  return typeof payload?.sub === "string" ? payload.sub : null;
+}
 
 /**
  * Offline-first write queue (spec §19 / plan Phase 3):
@@ -168,7 +176,7 @@ async function uploadAll(bucket: string, prefix: string, uris: string[]): Promis
 /** Send one queued row. Returns 'sent' | 'dropped' (remove) or throws (retry). */
 async function dispatch(row: OutboxRow): Promise<"sent" | "dropped"> {
   const sb = getSupabase();
-  const uid = (await sb.auth.getUser()).data.user?.id;
+  const uid = currentUserId();
   if (!uid) throw new Error("not signed in");
   const p = JSON.parse(row.payload) as Record<string, unknown>;
   switch (row.entity) {

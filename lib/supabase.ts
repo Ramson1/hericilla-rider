@@ -1,21 +1,27 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import * as SQLite from "expo-sqlite";
-import { supabaseAnonKey as pkgKey, supabaseUrl as pkgUrl } from "@hericilla/supabase-clients";
+import {
+  configureTokenStorage,
+  createSupabaseClient,
+  hasSupabaseEnv,
+  supabaseAnonKey as pkgKey,
+  supabaseUrl as pkgUrl,
+} from "@hericilla/supabase-clients";
 
 /**
  * Supabase client for React Native.
  * - Env vars are read as static literals so Metro inlines EXPO_PUBLIC_* values;
  *   the shared package exports are the fallback.
- * - Session is persisted in a local SQLite key-value table (survives app restarts,
- *   no AsyncStorage dependency).
+ * - The custom auth token is persisted in a local SQLite key-value table (survives
+ *   app restarts, no AsyncStorage dependency) via the shared token storage adapter.
  */
 
 // Static references — required for Expo's env inlining.
 const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const envKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-const url = envUrl || pkgUrl;
-const anonKey = envKey || pkgKey;
+export const resolvedUrl = envUrl || pkgUrl;
+export const resolvedAnonKey = envKey || pkgKey;
 
 const db = SQLite.openDatabaseSync("driver-local.db");
 db.execSync("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);");
@@ -33,27 +39,22 @@ const kvStorage = {
   },
 };
 
-export function hasSupabaseEnv(): boolean {
-  return Boolean(url && anonKey);
-}
+// Give the shared client our SQLite-backed persistence for the custom auth token.
+configureTokenStorage(kvStorage);
+
+export { hasSupabaseEnv };
 
 let singleton: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (!singleton) {
-    if (!url || !anonKey) {
+    if (!resolvedUrl || !resolvedAnonKey) {
       throw new Error(
         "Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in apps/driver-app/.env.local (see .env.example).",
       );
     }
-    singleton = createClient(url, anonKey, {
-      auth: {
-        storage: kvStorage,
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-      },
-    });
+    // Shared client injects the custom JWT as Authorization on every request.
+    singleton = createSupabaseClient();
   }
   return singleton;
 }

@@ -2,6 +2,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { router } from "expo-router";
+import { decodeJwtPayload, getAuthToken } from "@hericilla/supabase-clients";
 import { getSupabase } from "./supabase";
 
 /**
@@ -24,10 +25,10 @@ let lastRegistered: string | null = null;
 export async function registerForPush(): Promise<void> {
   if (!Device.isDevice) return; // Expo push does not work on simulators.
   const sb = getSupabase();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) return;
+  const authToken = getAuthToken();
+  const payload = authToken ? decodeJwtPayload(authToken) : null;
+  const uid = typeof payload?.sub === "string" ? payload.sub : null;
+  if (!uid) return;
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -50,7 +51,7 @@ export async function registerForPush(): Promise<void> {
   if (token === lastRegistered) return;
 
   const { error } = await sb.from("hericilla_expo_push_tokens").upsert(
-    { token, user_id: user.id, os: Platform.OS, enabled: true, updated_at: new Date().toISOString() },
+    { token, user_id: uid, os: Platform.OS, enabled: true, updated_at: new Date().toISOString() },
     { onConflict: "token" },
   );
   if (!error) lastRegistered = token;

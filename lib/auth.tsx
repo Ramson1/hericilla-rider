@@ -1,20 +1,31 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import type { Profile } from "@hericilla/types";
+import {
+  AuthFunctionError,
+  clearAuthToken,
+  decodeJwtPayload,
+  getSupabase as getSharedSupabase,
+  invokeAuthFunction,
+  restoreAuthToken,
+  setAuthToken,
+} from "@hericilla/supabase-clients";
 import { getSupabase } from "./supabase";
 
 /**
- * Auth context for the driver app.
- * Only accounts whose profile role is `driver` may enter; everyone else sees
- * a plain-English lock-out message.
+ * Auth context for the driver app — fully custom (no Supabase Auth).
+ * Only accounts whose profile role is `driver` may enter; everyone else sees a
+ * plain-English lock-out message. The custom JWT is persisted in SQLite via the
+ * storage adapter configured in lib/supabase.ts.
  */
 
 interface AuthState {
   loading: boolean;
-  session: Session | null;
+  userId: string | null;
   profile: Profile | null;
   /** Non-null when the signed-in account is not allowed here. */
   lockedReason: string | null;
+  /** True when a freshly-created account must set its own password first. */
+  mustReset: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   requestReset: (email: string) => Promise<string | null>;
@@ -23,21 +34,25 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lockedReason, setLockedReason] = useState<string | null>(null);
+  const [mustReset, setMustReset] = useState(false);
 
-  const loadProfile = async (userId: string) => {
-    const { data, error } = await getSupabase().from("hericilla_profiles").select("*").eq("id", userId).maybeSingle();
-    if (error || !data) {
-      setProfile(null);
-      setLockedReason("We could not find your account details. Please call the office.");
+  const applyProfile = (p: Profile | null) => {
+    setProfile(p);
+    if (!p) {
+      setLockedReason(null);
       return;
     }
-    const p = data as Profile;
-    setProfile(p);
     if (p.role !== "driver") {
       setLockedReason(`This app is only for drivers. Your account type is "${p.role}". Please use the staff portal instead.`);
     } else if (p.status !== "active") {
@@ -47,69 +62,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loadProfile = async (sub: string) => {
+    const { data, error } = await getSupabase().from("hericilla_profiles").select("*").eq("id", sub).maybeSingle();
+    if (error || !data) {
+      applyProfile(null);
+      setLockedReason("We could not find your account details. Please call the office.");
+      return;
+    }
+    applyProfile(data as Profile);
+  };
+
+  const adoptSession = (token: string) => {
+    setAuthToken(token);
+    getSharedSupabase().realtime.setAuth(token);
+    const payload = decodeJwtPayload(token);
+    const sub = typeof payload?.sub === "string" ? payload.sub : null;
+    setMustReset(payload?.must_reset === true);
+    setUserId(sub);
+    if (sub) void loadProfile(sub);
+  };
+
   useEffect(() => {
-    const sb = getSupabase();
     let mounted = true;
     void (async () => {
-      const { data } = await sb.auth.getSession();
+      const token = await restoreAuthToken();
       if (!mounted) return;
-      setSession(data.session);
-      if (data.session) await loadProfile(data.session.user.id);
-      setLoading(false);
-    })();
-    const { data: sub } = sb.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (!s) {
-        setProfile(null);
-        setLockedReason(null);
-      } else {
-        void loadProfile(s.user.id);
+      if (token) {
+        getSharedSupabase().realtime.setAuth(token);
+        const payload = decodeJwtPayload(token);
+        const sub = typeof payload?.sub === "string" ? payload.sub : null;
+        setMustReset(payload?.must_reset === true);
+        setUserId(sub);
+        if (sub) await loadProfile(sub);
       }
-    });
+      if (mounted) setLoading(false);
+    })();
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<AuthState>(
     () => ({
       loading,
-      session,
+      userId,
       profile,
       lockedReason,
+      mustReset,
       async signIn(email, password) {
-        const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
-        return error ? friendlyAuthError(error.message) : null;
+        try {
+          const res = await invokeAuthFunction<{ token: string; profile: Profile; must_reset: boolean }>("auth-login", {
+            email: email.trim(),
+            password,
+          });
+          adoptSession(res.token);
+          return null;
+        } catch (err) {
+          if (err instanceof AuthFunctionError) return err.message;
+          return "No internet connection. Connect and try again.";
+        }
       },
       async signOut() {
-        await getSupabase().auth.signOut();
+        clearAuthToken();
+        getSharedSupabase().realtime.setAuth("");
+        setUserId(null);
+        applyProfile(null);
+        setMustReset(false);
       },
       async requestReset(email) {
-        const { error } = await getSupabase().auth.resetPasswordForEmail(email.trim());
-        return error ? friendlyAuthError(error.message) : null;
+        try {
+          await invokeAuthFunction("auth-forgot-password", { email: email.trim() });
+          return null; // always ok — no account enumeration
+        } catch (err) {
+          if (err instanceof AuthFunctionError) return err.message;
+          return "Could not send the reset link. Check your connection and try again.";
+        }
       },
       async refreshProfile() {
-        if (session) await loadProfile(session.user.id);
+        if (userId) await loadProfile(userId);
       },
     }),
-    [loading, session, profile, lockedReason],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loading, userId, profile, lockedReason, mustReset],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
-  return ctx;
-}
-
-function friendlyAuthError(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes("invalid login")) return "The email or password is not correct. Try again, or press 'Forgot password'.";
-  if (m.includes("email not confirmed")) return "Your email is not confirmed yet. Please call the office.";
-  if (m.includes("rate")) return "Too many tries. Wait a minute, then try again.";
-  if (m.includes("network") || m.includes("failed to fetch")) return "No internet connection. Connect and try again.";
-  return message;
 }

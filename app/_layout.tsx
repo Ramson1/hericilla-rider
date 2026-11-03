@@ -24,7 +24,7 @@ export default function RootLayout() {
 }
 
 function Shell() {
-  const { loading, session, lockedReason } = useAuth();
+  const { loading, userId, lockedReason, mustReset } = useAuth();
   const segments = useSegments();
 
   useEffect(() => {
@@ -37,15 +37,18 @@ function Shell() {
   }, []);
 
   useEffect(() => {
-    if (session && !lockedReason) void registerForPush();
-  }, [session?.user.id, lockedReason]);
+    if (userId && !lockedReason) void registerForPush();
+  }, [userId, lockedReason]);
 
   useEffect(() => {
     if (loading) return;
     const onLogin = segments[0] === "login";
-    if (!session && !onLogin) router.replace("/login");
-    if (session && !lockedReason && onLogin) router.replace("/");
-  }, [loading, session, lockedReason, segments]);
+    const onChangePassword = segments[0] === "change-password";
+    if (!userId && !onLogin) router.replace("/login");
+    if (userId && lockedReason && !onLogin) router.replace("/login");
+    if (userId && !lockedReason && onLogin) router.replace(mustReset ? "/change-password" : "/");
+    if (userId && !lockedReason && mustReset && !onChangePassword) router.replace("/change-password");
+  }, [loading, userId, lockedReason, mustReset, segments]);
 
   if (loading) {
     return (
@@ -57,9 +60,9 @@ function Shell() {
     );
   }
 
-  if (session && lockedReason) return <LockedScreen reason={lockedReason} />;
+  if (userId && lockedReason) return <LockedScreen reason={lockedReason} />;
 
-  const signedIn = Boolean(session) && !lockedReason;
+  const signedIn = Boolean(userId) && !lockedReason && !mustReset;
   return (
     <View style={{ flex: 1, backgroundColor: colors.brand50 }}>
       {signedIn ? (

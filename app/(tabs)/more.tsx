@@ -120,7 +120,7 @@ export default function MoreScreen() {
           accessibilityLabel="Black-Box Tech logo"
         />
         <Text style={{ fontSize: text.xs, color: colors.gray700, textAlign: "center" }}>
-          Designed and Developed by <Text style={{ fontWeight: "800" }}>Black-Box Tech</Text>, and Ayo Ogundipe.
+          Designed and Developed by <Text style={{ fontWeight: "800" }}>Black-Box Tech</Text> and Ayo Ogundipe.
         </Text>
       </Pressable>
     </Screen>
