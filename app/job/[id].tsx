@@ -49,13 +49,33 @@ export default function JobDetailScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await getSupabase()
+    const sb = getSupabase();
+    const { data } = await sb
       .from("hericilla_transport_jobs")
-      .select("*, work_orders:hericilla_work_orders(id, wo_number, service_request_id), vehicles:hericilla_vehicles(id, reg_no, vehicle_type)")
+      .select("*, work_orders:hericilla_work_orders(id, wo_number, service_request_id)")
       .eq("id", id)
       .maybeSingle();
     setJob((data as unknown as JobDetail) ?? null);
-    if (!data) setNotFound(true);
+    if (!data) {
+      setNotFound(true);
+      return;
+    }
+    // The vehicle is not reachable from hericilla_transport_jobs — the job has no FK to
+    // hericilla_vehicles, so embedding it made this entire query fail (PGRST200) and the
+    // screen showed "job not found" for jobs that exist. Allocations carry both links.
+    const woId = (data as unknown as JobDetail).work_orders?.id;
+    const { data: alloc } = woId
+      ? await sb
+          .from("hericilla_vehicle_allocations")
+          .select("vehicle:hericilla_vehicles(id, reg_no, vehicle_type)")
+          .eq("work_order_id", woId)
+          .is("released_at", null)
+          .order("valid_from", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+    const vehicle = (alloc?.vehicle as unknown as JobDetail["vehicles"]) ?? null;
+    setJob((prev) => (prev ? { ...prev, vehicles: vehicle } : prev));
   }, [id]);
 
   useOnFocus(() => void load(), [id]);
